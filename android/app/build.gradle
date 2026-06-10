@@ -1,0 +1,99 @@
+apply plugin: "com.android.application"
+apply plugin: "org.jetbrains.kotlin.android"
+apply plugin: "com.facebook.react"
+
+/**
+ * React Native build configuration.
+ */
+react {
+    // autolinking and codegen handled by the RN gradle plugin defaults
+}
+
+/**
+ * Enable Hermes for smaller, faster JS execution.
+ */
+def enableHermes = (findProperty('hermesEnabled') ?: "true").toBoolean()
+
+/**
+ * Release signing.
+ * Values are read from android/keystore.properties (local) or from
+ * environment variables provided by CI (GitHub Secrets). Never commit
+ * a real keystore or real passwords to a public repository.
+ */
+def keystorePropertiesFile = rootProject.file("keystore.properties")
+def keystoreProperties = new Properties()
+def hasKeystoreProps = keystorePropertiesFile.exists()
+if (hasKeystoreProps) {
+    keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+}
+
+def resolveSigning = { String propKey, String envKey ->
+    if (hasKeystoreProps && keystoreProperties[propKey] != null) {
+        return keystoreProperties[propKey]
+    }
+    return System.getenv(envKey)
+}
+
+android {
+    ndkVersion rootProject.ext.ndkVersion
+    buildToolsVersion rootProject.ext.buildToolsVersion
+    compileSdk rootProject.ext.compileSdkVersion
+
+    namespace "com.numiland.adventure"
+
+    defaultConfig {
+        applicationId "com.numiland.adventure"
+        minSdkVersion rootProject.ext.minSdkVersion
+        targetSdkVersion rootProject.ext.targetSdkVersion
+        versionCode 1
+        versionName "1.0.0"
+    }
+
+    signingConfigs {
+        debug {
+            storeFile file('debug.keystore')
+            storePassword 'android'
+            keyAlias 'androiddebugkey'
+            keyPassword 'android'
+        }
+        release {
+            def storeFilePath = resolveSigning('storeFile', 'ANDROID_KEYSTORE_FILE') ?: 'release.keystore'
+            def storePass = resolveSigning('storePassword', 'ANDROID_KEYSTORE_PASSWORD')
+            def alias = resolveSigning('keyAlias', 'ANDROID_KEY_ALIAS')
+            def keyPass = resolveSigning('keyPassword', 'ANDROID_KEY_PASSWORD')
+            def resolvedStore = rootProject.file(storeFilePath)
+            if (resolvedStore.exists() && storePass != null && alias != null && keyPass != null) {
+                storeFile resolvedStore
+                storePassword storePass
+                keyAlias alias
+                keyPassword keyPass
+            }
+        }
+    }
+
+    buildTypes {
+        debug {
+            signingConfig signingConfigs.debug
+        }
+        release {
+            // Use release signing when configured, otherwise fall back to debug
+            // so local `assembleRelease` still produces an installable APK.
+            def relStore = rootProject.file(
+                resolveSigning('storeFile', 'ANDROID_KEYSTORE_FILE') ?: 'release.keystore')
+            signingConfig relStore.exists() ? signingConfigs.release : signingConfigs.debug
+
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
+        }
+    }
+}
+
+dependencies {
+    implementation("com.facebook.react:react-android")
+    if (enableHermes) {
+        implementation("com.facebook.react:hermes-android")
+    } else {
+        implementation("org.webkit:android-jsc:+")
+    }
+}
