@@ -6,7 +6,9 @@ apply plugin: "com.facebook.react"
  * React Native build configuration.
  */
 react {
-    // autolinking and codegen handled by the RN gradle plugin defaults
+    // Wires autolinked native modules (AsyncStorage, screens, safe-area-context)
+    // into the app so their Android packages are compiled and available.
+    autolinkLibrariesWithApp()
 }
 
 /**
