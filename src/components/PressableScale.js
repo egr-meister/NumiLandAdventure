@@ -1,6 +1,8 @@
 // A button-like wrapper that gently scales down on press (soft micro-animation).
+// The visual style is applied to the Pressable itself so it participates in
+// flex/row layouts (e.g. flex:1 keys and answer buttons stretch correctly).
 import React, {useRef} from 'react';
-import {Animated, Pressable} from 'react-native';
+import {Animated, Pressable, StyleSheet} from 'react-native';
 
 export default function PressableScale({
   children,
@@ -26,10 +28,20 @@ export default function PressableScale({
       accessibilityLabel={accessibilityLabel}
       onPressIn={() => animateTo(0.94)}
       onPressOut={() => animateTo(1)}
-      onPress={onPress}>
-      <Animated.View style={[{transform: [{scale}]}, style]}>
+      onPress={onPress}
+      style={style}>
+      <Animated.View style={[styles.inner, {transform: [{scale}]}]}>
         {children}
       </Animated.View>
     </Pressable>
   );
 }
+
+const styles = StyleSheet.create({
+  // Fill the Pressable so children stay centered while the press scale animates.
+  inner: {
+    alignSelf: 'stretch',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+});
